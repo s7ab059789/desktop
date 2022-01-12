@@ -21,8 +21,8 @@ import { CICheckRunPopover } from '../check-runs/ci-check-run-popover'
 import { TooltipTarget } from '../lib/tooltip'
 import { BranchType, Branch } from '../../models/branch'
 import { PopupType } from '../../models/popup'
-import { generateBranchContextMenuItems } from '../branches/branch-list-item-context-menu'
-import { showContextualMenu } from '../../lib/menu-item'
+import { createBranchContextMenuItems } from '../branches/branch-list-item-context-menu'
+import { showContextualMenu } from '../main-process-proxy'
 
 interface IBranchDropdownProps {
   readonly dispatcher: Dispatcher
@@ -74,7 +74,7 @@ interface IBranchDropdownState {
 export class BranchDropdown extends React.Component<
   IBranchDropdownProps,
   IBranchDropdownState
-> {
+  > {
   public constructor(props: IBranchDropdownProps) {
     super(props)
     this.state = {
@@ -195,7 +195,7 @@ export class BranchDropdown extends React.Component<
           iconClassName={iconClassName}
           title={title}
           description={description}
-          onContextMenu={this.onBranchToolbarButtonContextMenu}
+          onContextMenu={this.createContextMenuItems}
           tooltip={isOpen ? undefined : tooltip}
           onDropdownStateChanged={this.onDropDownStateChanged}
           dropdownContentRenderer={this.renderBranchFoldout}
@@ -228,31 +228,31 @@ export class BranchDropdown extends React.Component<
     }
   }
 
-  private onBranchToolbarButtonContextMenu = (
-    event: React.MouseEvent<HTMLButtonElement>
-  ): void => {
+  private createContextMenuItems = (event: React.MouseEvent<HTMLButtonElement>): void => {
     event.preventDefault()
 
-    const { tip } = this.props.repositoryState.branchesState
+    const repositoryState = this.props.repositoryState
+    const tip = repositoryState.branchesState.tip
+    const currentBranch = tip.kind === TipState.Valid ? tip.branch : null
 
-    if (tip.kind !== TipState.Valid) {
+    if (currentBranch === null) {
       return
     }
 
-    const items = generateBranchContextMenuItems({
-      name: tip.branch.name,
-      isLocal: tip.branch.type === BranchType.Local,
-      onRenameBranch: this.onRenameBranch,
-      onDeleteBranch: this.onDeleteBranch,
-    })
+    const isLocal = currentBranch.type === BranchType.Local
+
+    const items = createBranchContextMenuItems(
+      currentBranch.name,
+      isLocal,
+      this.onRenameBranch,
+      this.onDeleteBranch
+    )
 
     showContextualMenu(items)
   }
 
   private getBranchWithName(branchName: string): Branch | undefined {
-    return this.props.repositoryState.branchesState.allBranches.find(
-      branch => branch.name === branchName
-    )
+    return this.props.repositoryState.branchesState.allBranches.find(branch => branch.name === branchName)
   }
 
   private onRenameBranch = (branchName: string) => {
@@ -265,34 +265,33 @@ export class BranchDropdown extends React.Component<
     this.props.dispatcher.showPopup({
       type: PopupType.RenameBranch,
       repository: this.props.repository,
-      branch,
+      branch: branch,
     })
   }
 
   private onDeleteBranch = async (branchName: string) => {
     const branch = this.getBranchWithName(branchName)
-    const { dispatcher, repository } = this.props
 
     if (branch === undefined) {
       return
     }
 
     if (branch.type === BranchType.Remote) {
-      dispatcher.showPopup({
+      this.props.dispatcher.showPopup({
         type: PopupType.DeleteRemoteBranch,
-        repository,
+        repository: this.props.repository,
         branch,
       })
       return
     }
 
-    const aheadBehind = await dispatcher.getBranchAheadBehind(
-      repository,
+    const aheadBehind = await this.props.dispatcher.getBranchAheadBehind(
+      this.props.repository,
       branch
     )
-    dispatcher.showPopup({
+    this.props.dispatcher.showPopup({
       type: PopupType.DeleteBranch,
-      repository,
+      repository: this.props.repository,
       branch,
       existsOnRemote: aheadBehind !== null,
     })
