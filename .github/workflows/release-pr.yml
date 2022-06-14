@@ -1,6 +1,9 @@
 name: 'Create Release Pull Request'
 
-on: create
+on:
+  create:
+    branches:
+      - releases/*
 
 jobs:
   build:
@@ -9,13 +12,11 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@v3
-        if: |
-          startsWith(github.ref, 'refs/heads/releases/') && !contains(github.ref, 'test')
+      - uses: actions/checkout@v2
+        if: ${{ !contains(github.ref, 'test') }}
 
       - name: Create Pull Request content
-        if: |
-          startsWith(github.ref, 'refs/heads/releases/') && !contains(github.ref, 'test')
+        if: ${{ !contains(github.ref, 'test') }}
         run: |
           PR_TITLE=`./script/draft-release/release-pr-content.sh title ${GITHUB_REF#refs/heads/}`
           PR_BODY=`./script/draft-release/release-pr-content.sh body ${GITHUB_REF#refs/heads/}`
@@ -30,20 +31,18 @@ jobs:
 
       - uses: tibdex/github-app-token@v1
         id: generate-token
-        if: |
-          startsWith(github.ref, 'refs/heads/releases/') && !contains(github.ref, 'test')
+        if: ${{ !contains(github.ref, 'test') }}
         with:
           app_id: ${{ secrets.DESKTOP_RELEASES_APP_ID }}
           private_key: ${{ secrets.DESKTOP_RELEASES_APP_PRIVATE_KEY }}
 
       - name: Create Release Pull Request
-        uses: peter-evans/create-pull-request@v4.1.1
-        if: |
-          startsWith(github.ref, 'refs/heads/releases/') && !contains(github.ref, 'test')
+        uses: peter-evans/create-pull-request@v4.0.4
+        if: ${{ !contains(github.ref, 'test') }}
         with:
           token: ${{ steps.generate-token.outputs.token }}
           title: ${{ env.PR_TITLE }}
           body: ${{ env.PR_BODY }}
           branch: ${{ github.ref }}
           base: development
-          draft: true
+          reviewers: desktop
