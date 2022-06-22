@@ -250,6 +250,17 @@ export class Dispatcher {
     return this.appStore._changeCommitSelection(repository, shas, isContiguous)
   }
 
+  /** Update whether shas not in the diff should be highlighted (or opposite of highlighted..) */
+  public updateShasNotInDiffHighlighted(
+    repository: Repository,
+    shasNotInDiffHighlighted: boolean
+  ) {
+    this.appStore._updateShasNotInDiffHighlighted(
+      repository,
+      shasNotInDiffHighlighted
+    )
+  }
+
   /**
    * Change the selected commit in the pull request commit view.
    *

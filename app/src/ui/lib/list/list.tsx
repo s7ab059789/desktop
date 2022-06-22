@@ -230,6 +230,8 @@ interface IListProps {
    * where to scroll do on rendering of the list.
    */
   readonly setScrollTop?: number
+
+  readonly forceGridUpdate?: boolean
 }
 
 interface IListState {
@@ -765,12 +767,19 @@ export class List extends React.Component<IListProps, IListState> {
           this.props.invalidationProps
         )
 
+        const forceRowRerenderChanged =
+          prevProps.forceGridUpdate !== this.props.forceGridUpdate
+
         // Now we need to figure out whether anything changed in such a way that
         // the Grid has to update regardless of its props. Previously we passed
         // our selectedRow and invalidationProps down to Grid and figured that
         // it, being a pure component, would do the right thing but that's not
         // quite the case since invalidationProps is a complex object.
-        if (selectedRowChanged || invalidationPropsChanged) {
+        if (
+          selectedRowChanged ||
+          invalidationPropsChanged ||
+          forceRowRerenderChanged
+        ) {
           this.grid.forceUpdate()
         }
       }
