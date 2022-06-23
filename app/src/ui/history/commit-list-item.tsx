@@ -53,7 +53,6 @@ interface ICommitProps {
   readonly unpushedTags?: ReadonlyArray<string>
   readonly isCherryPickInProgress?: boolean
   readonly disableSquashing?: boolean
-  readonly isNotInDiff: boolean
 }
 
 interface ICommitListItemState {
@@ -122,7 +121,7 @@ export class CommitListItem extends React.PureComponent<
   }
 
   public render() {
-    const { commit, isNotInDiff } = this.props
+    const { commit } = this.props
     const {
       author: { date },
     } = commit
@@ -135,10 +134,6 @@ export class CommitListItem extends React.PureComponent<
 
     const summaryClassNames = classNames('summary', {
       'empty-summary': hasEmptySummary,
-    })
-
-    const commitClassNames = classNames('commit', {
-      'not-in-diff': isNotInDiff,
     })
 
     return (
@@ -155,7 +150,7 @@ export class CommitListItem extends React.PureComponent<
         ]}
       >
         <div
-          className={commitClassNames}
+          className="commit"
           onContextMenu={this.onContextMenu}
           onMouseEnter={this.onMouseEnter}
           onMouseLeave={this.onMouseLeave}
