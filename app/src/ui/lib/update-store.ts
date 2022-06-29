@@ -167,10 +167,13 @@ class UpdateStore {
   /**
    * Check for updates.
    *
-   * @param inBackground - Are we checking for updates in the background, or was
+   * @param inBackground  - Are we checking for updates in the background, or was
    *                       this check user-initiated?
+   * @param skipGuidCheck - If true, don't check the GUID. If true, this will
+   *                       effectively disable the staggered releases system and
+   *                       attempt to retrieve the latest available deployment.
    */
-  public async checkForUpdates(inBackground: boolean, staggered: boolean) {
+  public async checkForUpdates(inBackground: boolean, skipGuidCheck: boolean) {
     // An update has been downloaded and the app is waiting to be restarted.
     // Checking for updates again may result in the running app being nuked
     // when it finds a subsequent update.
@@ -178,7 +181,7 @@ class UpdateStore {
       return
     }
 
-    const updatesUrl = await this.getUpdatesUrl(staggered)
+    const updatesUrl = await this.getUpdatesUrl(skipGuidCheck)
 
     if (updatesUrl === null) {
       return
@@ -193,7 +196,7 @@ class UpdateStore {
     }
   }
 
-  private async getUpdatesUrl(staggered: boolean) {
+  private async getUpdatesUrl(skipGuidCheck: boolean) {
     let url = null
 
     try {
@@ -206,9 +209,10 @@ class UpdateStore {
     // Send the GUID to the update server for staggered release support
     url.searchParams.set('guid', await getRendererGUID())
 
-    if (!staggered) {
-      // If omitted, staggered releases will be enabled by default
-      url.searchParams.set('staggered', '0')
+    if (skipGuidCheck) {
+      // This will effectively disable the staggered releases system and attempt
+      // to retrieve the latest available deployment.
+      url.searchParams.set('skipGuidCheck', '1')
     }
 
     // If the app is running under arm64 to x64 translation, we need to tweak the
