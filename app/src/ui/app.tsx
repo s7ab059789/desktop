@@ -2214,7 +2214,7 @@ export class App extends React.Component<IAppProps, IAppState> {
         )
       }
       case PopupType.UnreachableCommits: {
-        const { selectedState } = this.state
+        const { selectedState, emoji } = this.state
         if (
           selectedState == null ||
           selectedState.type !== SelectionType.Repository
@@ -2233,6 +2233,7 @@ export class App extends React.Component<IAppProps, IAppState> {
             shasInDiff={shasInDiff}
             commitLookup={commitLookup}
             selectedTab={popup.selectedTab}
+            emoji={emoji}
             onDismissed={onPopupDismissedFn}
           />
         )
