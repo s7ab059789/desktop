@@ -5,6 +5,7 @@ import {
   BrowserWindow,
   autoUpdater,
   nativeTheme,
+  WebContents,
 } from 'electron'
 import { Emitter, Disposable } from 'event-kit'
 import { encodePathAsUrl } from '../lib/path'
@@ -213,8 +214,8 @@ export class AppWindow {
     return !!this.loadTime && !!this.rendererReadyTime
   }
 
-  public get webContentsId(): number {
-    return this.window.webContents.id
+  public get webContents(): WebContents {
+    return this.window.webContents
   }
 
   public onClose(fn: () => void) {

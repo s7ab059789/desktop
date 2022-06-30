@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, WebContents } from 'electron'
 import { Emitter, Disposable } from 'event-kit'
 import { ICrashDetails, ErrorType } from '../crash/shared'
 import { registerWindowStateChangedEvents } from '../lib/window-state'
@@ -58,8 +58,8 @@ export class CrashWindow {
     this.errorType = errorType
   }
 
-  public get webContentsId(): number {
-    return this.window.webContents.id
+  public get webContents(): WebContents {
+    return this.window.webContents
   }
 
   public load() {
