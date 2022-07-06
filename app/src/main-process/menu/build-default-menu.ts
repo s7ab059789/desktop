@@ -398,14 +398,18 @@ export function buildDefaultMenu({
       accelerator: 'CmdOrCtrl+Shift+M',
       click: emit('merge-branch'),
     },
-    {
-      label: __DARWIN__
-        ? 'Squash and Merge into Current Branch…'
-        : 'Squas&h and merge into current branch…',
-      id: 'squash-and-merge-branch',
-      accelerator: 'CmdOrCtrl+Shift+H',
-      click: emit('squash-and-merge-branch'),
-    },
+  ]
+
+  branchSubmenu.push({
+    label: __DARWIN__
+      ? 'Squash and Merge into Current Branch…'
+      : 'Squas&h and merge into current branch…',
+    id: 'squash-and-merge-branch',
+    accelerator: 'CmdOrCtrl+Shift+H',
+    click: emit('squash-and-merge-branch'),
+  })
+
+  branchSubmenu.push(
     {
       label: __DARWIN__ ? 'Rebase Current Branch…' : 'R&ebase current branch…',
       id: 'rebase-branch',
@@ -430,16 +434,8 @@ export function buildDefaultMenu({
       id: 'create-pull-request',
       accelerator: 'CmdOrCtrl+R',
       click: emit('open-pull-request'),
-    },
-  ]
-  if (!hasCurrentPullRequest) {
-    branchSubmenu.push({
-      label: __DARWIN__ ? 'Preview Pull Request' : 'Preview pull request',
-      id: 'preview-pull-request',
-      accelerator: 'CmdOrCtrl+Alt+P',
-      click: emit('preview-pull-request'),
-    })
-  }
+    }
+  )
 
   template.push({
     label: __DARWIN__ ? 'Branch' : '&Branch',
