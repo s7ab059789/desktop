@@ -19,7 +19,6 @@ import {
   CherryPickConflictState,
   MultiCommitOperationConflictState,
   IMultiCommitOperationState,
-  PullRequestSectionTab,
 } from '../../lib/app-state'
 import { assertNever, fatalError } from '../../lib/fatal-error'
 import {
@@ -107,6 +106,7 @@ import { resolveWithin } from '../../lib/path'
 import { CherryPickResult } from '../../lib/git/cherry-pick'
 import { sleep } from '../../lib/promise'
 import { DragElement, DragType } from '../../models/drag-drop'
+import { findDefaultUpstreamBranch } from '../../lib/branch'
 import { ILastThankYou } from '../../models/last-thank-you'
 import { dragAndDropManager } from '../../lib/drag-and-drop-manager'
 import {
@@ -119,7 +119,6 @@ import {
 import { getMultiCommitOperationChooseBranchStep } from '../../lib/multi-commit-operation'
 import { ICombinedRefCheck, IRefCheck } from '../../lib/ci-checks/ci-checks'
 import { ValidNotificationPullRequestReviewState } from '../../lib/valid-notification-pull-request-review'
-import { UnreachableCommitsTab } from '../history/unreachable-commits-dialog'
 
 /**
  * An error handler function.
@@ -224,15 +223,6 @@ export class Dispatcher {
     return this.appStore._loadChangedFilesForCurrentSelection(repository)
   }
 
-  /** Load the changed files for the current pull request selection. */
-  public loadPullRequestChangedFilesForCurrentSelection(
-    repository: Repository
-  ): Promise<void> {
-    return this.appStore._loadPullRequestChangedFilesForCurrentSelection(
-      repository
-    )
-  }
-
   /**
    * Change the selected commit in the history view.
    *
@@ -259,35 +249,6 @@ export class Dispatcher {
   }
 
   /**
-   * Change the selected commit in the pull request commit view.
-   *
-   * @param repository The currently active repository instance
-   *
-   * @param sha The object id of one of the commits currently
-   *            the history list, represented as a SHA-1 hash
-   *            digest. This should match exactly that of Commit.Sha
-   */
-  public changePullRequestCommitSelection(
-    repository: Repository,
-    shas: ReadonlyArray<string>,
-    isContiguous: boolean
-  ): void {
-    return this.appStore._changePullRequestCommitSelection(
-      repository,
-      shas,
-      isContiguous
-    )
-  }
-
-  /** Update the shas that should be highlighted */
-  public updateShasToHighlight(
-    repository: Repository,
-    shasToHighlight: ReadonlyArray<string>
-  ) {
-    this.appStore._updateShasToHighlight(repository, shasToHighlight)
-  }
-
-  /**
    * Change the selected changed file in the history view.
    *
    * @param repository The currently active repository instance
@@ -300,16 +261,6 @@ export class Dispatcher {
     file: CommittedFileChange
   ): Promise<void> {
     return this.appStore._changeFileSelection(repository, file)
-  }
-
-  /**
-   * Change the selected changed file in the pull request  view.
-   */
-  public changePullRequestFileSelection(
-    repository: Repository,
-    file: CommittedFileChange
-  ): Promise<void> {
-    return this.appStore._changePullRequestFileSelection(repository, file)
   }
 
   /** Set the repository filter text. */
@@ -2004,23 +1955,6 @@ export class Dispatcher {
     })
   }
 
-  public async openOrAddRepository(path: string): Promise<Repository | null> {
-    const state = this.appStore.getState()
-    const repositories = state.repositories
-    const existingRepository = repositories.find(r => r.path === path)
-
-    if (existingRepository) {
-      return await this.selectRepository(existingRepository)
-    }
-
-    return this.appStore._startOpenInDesktop(() => {
-      this.showPopup({
-        type: PopupType.AddRepository,
-        path,
-      })
-    })
-  }
-
   /**
    * Install the CLI tool.
    *
@@ -3273,8 +3207,7 @@ export class Dispatcher {
     sourceBranch: Branch | null
   ): Promise<void> {
     const { branchesState } = this.repositoryStateManager.get(repository)
-    const { defaultBranch, upstreamDefaultBranch, allBranches, tip } =
-      branchesState
+    const { defaultBranch, allBranches, tip } = branchesState
 
     if (tip.kind !== TipState.Valid) {
       this.appStore._clearCherryPickingHead(repository, null)
@@ -3286,6 +3219,12 @@ export class Dispatcher {
     const isGHRepo = isRepositoryWithGitHubRepository(repository)
     const upstreamGhRepo = isGHRepo
       ? getNonForkGitHubRepository(repository as RepositoryWithGitHubRepository)
+      : null
+    const upstreamDefaultBranch = isGHRepo
+      ? findDefaultUpstreamBranch(
+          repository as RepositoryWithGitHubRepository,
+          allBranches
+        )
       : null
 
     this.initializeMultiCommitOperation(
@@ -3990,29 +3929,5 @@ export class Dispatcher {
     reviewType: ValidNotificationPullRequestReviewState
   ) {
     this.statsStore.recordPullRequestReviewDialogSwitchToPullRequest(reviewType)
-  }
-
-  public showUnreachableCommits(selectedTab: UnreachableCommitsTab) {
-    this.statsStore.recordMultiCommitDiffUnreachableCommitsDialogOpenedCount()
-
-    this.showPopup({
-      type: PopupType.UnreachableCommits,
-      selectedTab,
-    })
-  }
-
-  public previewPullRequest(repository: Repository) {
-    this.appStore._previewPullRequest(repository)
-  }
-
-  public updatePullRequestSection(
-    repository: Repository,
-    tab: PullRequestSectionTab
-  ) {
-    this.appStore._updatePullRequestSection(repository, tab)
-  }
-
-  public clearPullRequestPreview(repository: Repository) {
-    this.appStore._clearPullRequestPreview(repository)
   }
 }
