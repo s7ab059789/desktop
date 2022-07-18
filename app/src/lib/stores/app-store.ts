@@ -4339,6 +4339,10 @@ export class AppStore extends TypedBaseStore<IAppState> {
             }
           )
 
+          if (enableUpdateDefaultBranch()) {
+            await updateRemoteHEAD(repository, account, remote)
+          }
+
           const refreshStartProgress = pullWeight + fetchWeight
           const refreshTitle = __DARWIN__
             ? 'Refreshing Repository'
