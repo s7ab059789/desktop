@@ -112,3 +112,8 @@ export function enablePullRequestQuickView(): boolean {
 export function enableMultiCommitDiffs(): boolean {
   return enableBetaFeatures()
 }
+
+/** Should we enable updating the default branch from the remote? */
+export function enableUpdateDefaultBranch(): boolean {
+  return enableBetaFeatures()
+}
