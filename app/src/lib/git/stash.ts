@@ -10,7 +10,7 @@ import {
   WorkingDirectoryFileChange,
   CommittedFileChange,
 } from '../../models/status'
-import { parseRawLogWithNumstat } from './log'
+import { parseChangedFiles } from './log'
 import { stageFiles } from './update-index'
 import { Branch } from '../../models/branch'
 
@@ -233,23 +233,59 @@ function extractBranchFromMessage(message: string): string | null {
   return match === null || match[1].length === 0 ? null : match[1]
 }
 
-/** Get the files that were changed in the given stash commit */
+/**
+ * Get the files that were changed in the given stash commit.
+ *
+ * This is different than `getChangedFiles` because stashes
+ * have _3 parents(!!!)_
+ */
 export async function getStashedFiles(
   repository: Repository,
   stashSha: string
 ): Promise<ReadonlyArray<CommittedFileChange>> {
+  const [trackedFiles, untrackedFiles] = await Promise.all([
+    getChangedFilesWithinStash(repository, stashSha),
+    getChangedFilesWithinStash(repository, `${stashSha}^3`),
+  ])
+
+  const files = new Map<string, CommittedFileChange>()
+  trackedFiles.forEach(x => files.set(x.path, x))
+  untrackedFiles.forEach(x => files.set(x.path, x))
+  return [...files.values()].sort((x, y) => x.path.localeCompare(y.path))
+}
+
+/**
+ * Same thing as `getChangedFiles` but with extra handling for 128 exit code
+ * (which happens if the commit's parent is not valid)
+ *
+ * **TODO:** merge this with `getChangedFiles` in `log.ts`
+ */
+async function getChangedFilesWithinStash(repository: Repository, sha: string) {
+  // opt-in for rename detection (-M) and copies detection (-C)
+  // this is equivalent to the user configuring 'diff.renames' to 'copies'
+  // NOTE: order here matters - doing -M before -C means copies aren't detected
   const args = [
-    'stash',
-    'show',
-    stashSha,
-    '--raw',
-    '--numstat',
-    '-z',
-    '--format=format:',
+    'log',
+    sha,
+    '-C',
+    '-M',
+    '-m',
+    '-1',
     '--no-show-signature',
+    '--first-parent',
+    '--name-status',
+    '--format=format:',
+    '-z',
     '--',
   ]
-  const { stdout } = await git(args, repository.path, 'getStashedFiles')
-
-  return parseRawLogWithNumstat(stdout, stashSha).files
+  const result = await git(args, repository.path, 'getChangedFilesForStash', {
+    // if this fails, its most likely
+    // because there weren't any untracked files,
+    // and that's okay!
+    successExitCodes: new Set([0, 128]),
+  })
+  if (result.exitCode === 0 && result.stdout.length > 0) {
+    return parseChangedFiles(result.stdout, sha, `${sha}^`)
+  }
+  return []
 }
