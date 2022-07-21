@@ -2639,7 +2639,7 @@ export class Dispatcher {
   }
 
   /** Hide the diff for stashed changes */
-  public async hideStashedChanges(repository: Repository) {
+  public hideStashedChanges(repository: Repository) {
     return this.appStore._hideStashedChanges(repository)
   }
 
