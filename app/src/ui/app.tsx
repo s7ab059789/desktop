@@ -636,7 +636,7 @@ export class App extends React.Component<IAppProps, IAppState> {
     return enterpriseAccount || null
   }
 
-  private async updateBranchWithContributionTargetBranch() {
+  private updateBranchWithContributionTargetBranch() {
     const { selectedState } = this.state
     if (
       selectedState == null ||
@@ -647,8 +647,10 @@ export class App extends React.Component<IAppProps, IAppState> {
 
     const { state, repository } = selectedState
 
-    const contributionTargetDefaultBranch =
-      await findContributionTargetDefaultBranch(repository, state.branchesState)
+    const contributionTargetDefaultBranch = findContributionTargetDefaultBranch(
+      repository,
+      state.branchesState
+    )
     if (!contributionTargetDefaultBranch) {
       return
     }
@@ -948,13 +950,13 @@ export class App extends React.Component<IAppProps, IAppState> {
     this.props.dispatcher.selectStashedFile(state.repository)
   }
 
-  private async hideStashedChanges() {
+  private hideStashedChanges() {
     const state = this.state.selectedState
     if (state == null || state.type !== SelectionType.Repository) {
       return
     }
 
-    return this.props.dispatcher.hideStashedChanges(state.repository)
+    this.props.dispatcher.hideStashedChanges(state.repository)
   }
 
   public componentDidMount() {
