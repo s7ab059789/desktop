@@ -122,6 +122,8 @@ export class Diff extends React.Component<IDiffProps, IDiffState> {
         return this.renderText(diff)
       case DiffType.Binary:
         return this.renderBinaryFile()
+      case DiffType.Submodule:
+        return this.renderSubmoduleDiff()
       case DiffType.Image:
         return this.renderImage(diff)
       case DiffType.LargeText: {
@@ -242,6 +244,10 @@ export class Diff extends React.Component<IDiffProps, IDiffState> {
     }
 
     return this.renderTextDiff(diff)
+  }
+
+  private renderSubmoduleDiff() {
+    return <h1>Hello world</h1>
   }
 
   private renderBinaryFile() {
