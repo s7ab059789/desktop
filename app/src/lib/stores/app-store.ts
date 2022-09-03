@@ -329,12 +329,14 @@ const confirmRepoRemovalDefault: boolean = true
 const confirmDiscardChangesDefault: boolean = true
 const confirmDiscardChangesPermanentlyDefault: boolean = true
 const askForConfirmationOnForcePushDefault = true
+const confirmUndoCommitDefault: boolean = true
 const askToMoveToApplicationsFolderKey: string = 'askToMoveToApplicationsFolder'
 const confirmRepoRemovalKey: string = 'confirmRepoRemoval'
 const confirmDiscardChangesKey: string = 'confirmDiscardChanges'
 const confirmDiscardChangesPermanentlyKey: string =
   'confirmDiscardChangesPermanentlyKey'
 const confirmForcePushKey: string = 'confirmForcePush'
+const confirmUndoCommitKey: string = 'confirmUndoCommit'
 
 const uncommittedChangesStrategyKey = 'uncommittedChangesStrategyKind'
 
@@ -437,6 +439,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
   private confirmDiscardChangesPermanently: boolean =
     confirmDiscardChangesPermanentlyDefault
   private askForConfirmationOnForcePush = askForConfirmationOnForcePushDefault
+  private confirmUndoCommit: boolean = confirmUndoCommitDefault
   private imageDiffType: ImageDiffType = imageDiffTypeDefault
   private hideWhitespaceInChangesDiff: boolean =
     hideWhitespaceInChangesDiffDefault
@@ -912,6 +915,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
       askForConfirmationOnDiscardChangesPermanently:
         this.confirmDiscardChangesPermanently,
       askForConfirmationOnForcePush: this.askForConfirmationOnForcePush,
+      askForConfirmationOnUndoCommit: this.confirmUndoCommit,
       uncommittedChangesStrategy: this.uncommittedChangesStrategy,
       selectedExternalEditor: this.selectedExternalEditor,
       imageDiffType: this.imageDiffType,
@@ -2301,6 +2305,11 @@ export class AppStore extends TypedBaseStore<IAppState> {
     this.askForConfirmationOnForcePush = getBoolean(
       confirmForcePushKey,
       askForConfirmationOnForcePushDefault
+    )
+
+    this.confirmUndoCommit = getBoolean(
+      confirmUndoCommitKey,
+      confirmUndoCommitDefault
     )
 
     this.uncommittedChangesStrategy =
@@ -4881,7 +4890,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     // Warn the user if there are changes in the working directory
     if (
       showConfirmationDialog &&
-      (!isWorkingDirectoryClean || commit.isMergeCommit)
+      ((this.confirmUndoCommit && !isWorkingDirectoryClean) || commit.isMergeCommit)
     ) {
       return this._showPopup({
         type: PopupType.WarnLocalChangesBeforeUndo,
@@ -5520,6 +5529,15 @@ export class AppStore extends TypedBaseStore<IAppState> {
     return Promise.resolve()
   }
 
+
+public _setConfirmUndoCommitSetting(value: boolean): Promise<void> {
+    this.confirmUndoCommit = value
+    setBoolean(confirmForcePushKey, value)
+
+    this.emitUpdate()
+
+    return Promise.resolve()
+  }
   public _setUncommittedChangesStrategySetting(
     value: UncommittedChangesStrategy
   ): Promise<void> {
