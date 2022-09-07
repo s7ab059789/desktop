@@ -4556,7 +4556,8 @@ export class AppStore extends TypedBaseStore<IAppState> {
     // Warn the user if there are changes in the working directory
     if (
       showConfirmationDialog &&
-      ((this.confirmUndoCommit && !isWorkingDirectoryClean) || commit.isMergeCommit)
+      ((this.confirmUndoCommit && !isWorkingDirectoryClean) ||
+        commit.isMergeCommit)
     ) {
       return this._showPopup({
         type: PopupType.WarnLocalChangesBeforeUndo,
@@ -5195,8 +5196,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
     return Promise.resolve()
   }
 
-
-public _setConfirmUndoCommitSetting(value: boolean): Promise<void> {
+  public _setConfirmUndoCommitSetting(value: boolean): Promise<void> {
     this.confirmUndoCommit = value
     setBoolean(confirmForcePushKey, value)
 
