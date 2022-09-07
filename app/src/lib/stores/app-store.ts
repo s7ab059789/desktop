@@ -4888,6 +4888,8 @@ export class AppStore extends TypedBaseStore<IAppState> {
       changesState.workingDirectory.files.length === 0
 
     // Warn the user if there are changes in the working directory
+    // This warning can be disabled, except when the user tries to undo
+    // a merge commit.
     if (
       showConfirmationDialog &&
       ((this.confirmUndoCommit && !isWorkingDirectoryClean) ||
@@ -5538,6 +5540,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
     return Promise.resolve()
   }
+
   public _setUncommittedChangesStrategySetting(
     value: UncommittedChangesStrategy
   ): Promise<void> {
