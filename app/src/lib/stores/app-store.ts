@@ -162,6 +162,9 @@ import {
   RepositoryType,
   getCommitRangeDiff,
   getCommitRangeChangedFiles,
+  updateRemoteHEAD,
+  getBranchMergeBaseChangedFiles,
+  getBranchMergeBaseDiff,
 } from '../git'
 import {
   installGlobalLFSFilters,
@@ -298,6 +301,7 @@ import {
 import * as ipcRenderer from '../ipc-renderer'
 import { pathExists } from '../../ui/lib/path-exists'
 import { offsetFromNow } from '../offset-from'
+import { findContributionTargetDefaultBranch } from '../branch'
 import { ValidNotificationPullRequestReview } from '../valid-notification-pull-request-review'
 import { determineMergeability } from '../git/merge-tree'
 
@@ -990,6 +994,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
       return {
         tip: gitStore.tip,
         defaultBranch: gitStore.defaultBranch,
+        upstreamDefaultBranch: gitStore.upstreamDefaultBranch,
         allBranches: gitStore.allBranches,
         recentBranches: gitStore.recentBranches,
         pullWithRebase: gitStore.pullWithRebase,
@@ -2130,6 +2135,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
   private updateMenuItemLabels(state: IRepositoryState | null) {
     const {
       selectedShell,
+      selectedRepository,
       selectedExternalEditor,
       askForConfirmationOnRepositoryRemoval,
       askForConfirmationOnForcePush,
@@ -2148,12 +2154,14 @@ export class AppStore extends TypedBaseStore<IAppState> {
     }
 
     const { changesState, branchesState, aheadBehind } = state
-    const { defaultBranch, currentPullRequest } = branchesState
+    const { currentPullRequest } = branchesState
 
-    const defaultBranchName =
-      defaultBranch === null || defaultBranch.upstreamWithoutRemote === null
-        ? undefined
-        : defaultBranch.upstreamWithoutRemote
+    let contributionTargetDefaultBranch: string | undefined
+    if (selectedRepository instanceof Repository) {
+      contributionTargetDefaultBranch =
+        findContributionTargetDefaultBranch(selectedRepository, branchesState)
+          ?.name ?? undefined
+    }
 
     const isForcePushForCurrentRepository = isCurrentBranchForcePush(
       branchesState,
@@ -2168,7 +2176,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
 
     updatePreferredAppMenuItemLabels({
       ...labels,
-      defaultBranchName,
+      contributionTargetDefaultBranch,
       isForcePushForCurrentRepository,
       isStashedChangesVisible,
       hasCurrentPullRequest: currentPullRequest !== null,
@@ -4348,9 +4356,7 @@ export class AppStore extends TypedBaseStore<IAppState> {
             }
           )
 
-          if (enableUpdateDefaultBranch()) {
-            await updateRemoteHEAD(repository, account, remote)
-          }
+          await updateRemoteHEAD(repository, account, remote)
 
           const refreshStartProgress = pullWeight + fetchWeight
           const refreshTitle = __DARWIN__
@@ -7131,6 +7137,127 @@ export class AppStore extends TypedBaseStore<IAppState> {
       repository,
       numberOfComments,
     })
+  }
+
+  public async _startPullRequest(repository: Repository) {
+    const { branchesState } = this.repositoryStateCache.get(repository)
+    const { defaultBranch, tip } = branchesState
+
+    if (defaultBranch === null || tip.kind !== TipState.Valid) {
+      return
+    }
+
+    const currentBranch = tip.branch
+    const gitStore = this.gitStoreCache.get(repository)
+
+    const pullRequestCommits = await gitStore.getCommitsBetweenBranches(
+      defaultBranch,
+      currentBranch
+    )
+
+    const commitSHAs = pullRequestCommits.map(c => c.sha)
+    const firstCommit = commitSHAs[0]
+
+    const changesetData = await gitStore.performFailableOperation(() =>
+      getBranchMergeBaseChangedFiles(
+        repository,
+        defaultBranch.name,
+        currentBranch.name,
+        firstCommit
+      )
+    )
+
+    if (changesetData === undefined) {
+      return
+    }
+
+    this.repositoryStateCache.initializePullRequestState(repository, {
+      baseBranch: defaultBranch,
+      commitSHAs,
+      commitSelection: {
+        shas: commitSHAs,
+        shasInDiff: commitSHAs,
+        isContiguous: true,
+        changesetData,
+        file: null,
+        diff: null,
+      },
+    })
+
+    if (changesetData.files.length > 0) {
+      await this._changePullRequestFileSelection(
+        repository,
+        changesetData.files[0]
+      )
+    }
+  }
+
+  public async _changePullRequestFileSelection(
+    repository: Repository,
+    file: CommittedFileChange
+  ): Promise<void> {
+    const { branchesState, pullRequestState } =
+      this.repositoryStateCache.get(repository)
+
+    if (
+      branchesState.tip.kind !== TipState.Valid ||
+      pullRequestState === null
+    ) {
+      return
+    }
+
+    const currentBranch = branchesState.tip.branch
+    const { baseBranch, commitSHAs } = pullRequestState
+    if (commitSHAs === null) {
+      return
+    }
+
+    this.repositoryStateCache.updatePullRequestCommitSelection(
+      repository,
+      () => ({
+        file,
+        diff: null,
+      })
+    )
+    this.emitUpdate()
+
+    if (commitShas.length === 0) {
+      // Shouldn't happen at this point, but if so moving forward doesn't
+      // make sense
+      return
+    }
+
+    const diff =
+      (await this.gitStoreCache
+        .get(repository)
+        .performFailableOperation(() =>
+          getBranchMergeBaseDiff(
+            repository,
+            file,
+            baseBranch.name,
+            currentBranch.name,
+            this.hideWhitespaceInHistoryDiff,
+            commitSHAs[0]
+          )
+        )) ?? null
+
+    const { pullRequestState: stateAfterLoad } =
+      this.repositoryStateCache.get(repository)
+    const selectedFileAfterDiffLoad = stateAfterLoad?.commitSelection?.file
+
+    if (selectedFileAfterDiffLoad?.id !== file.id) {
+      // this means user has clicked on another file since loading the diff
+      return
+    }
+
+    this.repositoryStateCache.updatePullRequestCommitSelection(
+      repository,
+      () => ({
+        diff,
+      })
+    )
+
+    this.emitUpdate()
   }
 }
 
