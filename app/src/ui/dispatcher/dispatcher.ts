@@ -1955,23 +1955,6 @@ export class Dispatcher {
     })
   }
 
-  public async openOrAddRepository(path: string): Promise<Repository | null> {
-    const state = this.appStore.getState()
-    const repositories = state.repositories
-    const existingRepository = repositories.find(r => r.path === path)
-
-    if (existingRepository) {
-      return await this.selectRepository(existingRepository)
-    }
-
-    return this.appStore._startOpenInDesktop(() => {
-      this.showPopup({
-        type: PopupType.AddRepository,
-        path,
-      })
-    })
-  }
-
   /**
    * Install the CLI tool.
    *

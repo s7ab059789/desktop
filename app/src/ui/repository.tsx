@@ -33,6 +33,7 @@ import { dragAndDropManager } from '../lib/drag-and-drop-manager'
 import { DragType } from '../models/drag-drop'
 import { MultiCommitOperationKind } from '../models/multi-commit-operation'
 import { clamp } from '../lib/clamp'
+import { PullRequestView } from './pull-request-view/pull-request-view'
 
 interface IRepositoryViewProps {
   readonly repository: Repository
@@ -526,6 +527,31 @@ export class RepositoryView extends React.Component<
   }
 
   public render() {
+    if (this.props.state.pullRequestState !== null && 1 !== 1) {
+      const { branchesState, pullRequestState } = this.props.state
+      return (
+        <PullRequestView
+          branchesState={branchesState}
+          pullRequestState={pullRequestState}
+          dispatcher={this.props.dispatcher}
+          repository={this.props.repository}
+          commitSummaryWidth={this.props.commitSummaryWidth}
+          sidebarWidth={this.props.sidebarWidth}
+          selectedDiffType={this.props.imageDiffType}
+          hideWhitespaceInDiff={this.props.hideWhitespaceInHistoryDiff}
+          showSideBySideDiff={this.props.showSideBySideDiff}
+          externalEditorLabel={this.props.externalEditorLabel}
+          onOpenBinaryFile={this.onOpenBinaryFile}
+          onChangeImageDiffType={this.onChangeImageDiffType}
+          onOpenInExternalEditor={this.props.onOpenInExternalEditor}
+          commitLookup={this.props.state.commitLookup}
+          emoji={this.props.emoji}
+          imageDiffType={this.props.imageDiffType}
+          onViewCommitOnGitHub={this.props.onViewCommitOnGitHub}
+        />
+      )
+    }
+
     return (
       <UiView id="repository">
         {this.renderSidebar()}
